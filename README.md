@@ -1,6 +1,3 @@
-![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
-
-
 # Keropiyo Tiny AM Radio
 
 [![GDS](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/gds.yaml/badge.svg)](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/gds.yaml)
