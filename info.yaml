@@ -1,5 +1,4 @@
-# Values to copy into the existing info.yaml
-
+# Tiny Tapeout project information
 project:
   title: "Keropiyo Tiny AM Radio"
   author: "keropiyo"
@@ -7,13 +6,20 @@ project:
   description: "A 1-bit software-defined AM radio receiver written in Verilog."
   language: "Verilog"
   clock_hz: 50000000
+
+  # Number of Tiny Tapeout tiles
   tiles: "1x1"
+
+  # Top module name
   top_module: "tt_um_keropiyo_am_radio"
 
+  # Source files stored in the src directory
   source_files:
     - "project.v"
 
+# Project pinout
 pinout:
+  # Dedicated inputs
   ui[0]: "COMP_IN"
   ui[1]: "ENC_A"
   ui[2]: "ENC_B"
@@ -23,6 +29,7 @@ pinout:
   ui[6]: ""
   ui[7]: ""
 
+  # Dedicated outputs
   uo[0]: "COMP_OUT"
   uo[1]: "PWM_AUDIO"
   uo[2]: "SAMPLE_TICK"
@@ -32,6 +39,7 @@ pinout:
   uo[6]: "AUDIO_LEVEL_6"
   uo[7]: "AUDIO_LEVEL_7"
 
+  # Bidirectional pins
   uio[0]: "CHANNEL_0"
   uio[1]: "CHANNEL_1"
   uio[2]: "CHANNEL_2"
@@ -40,3 +48,6 @@ pinout:
   uio[5]: "CHANNEL_5"
   uio[6]: "CHANNEL_6"
   uio[7]: ""
+
+# Do not change
+yaml_version: 6
