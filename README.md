@@ -3,13 +3,15 @@
 [![GDS](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/gds.yaml/badge.svg)](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/gds.yaml)
 [![Tests](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/test.yaml/badge.svg)](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/test.yaml)
 [![Docs](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/docs.yaml/badge.svg)](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/docs.yaml)
+[![FPGA](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/fpga.yaml/badge.svg)](https://github.com/keropiyo/ttsky-verilog-keropiyo/actions/workflows/fpga.yaml)
 
 A 1-bit software-defined AM radio receiver implemented in Verilog for Tiny Tapeout.
 
 This project digitally performs AM station tuning, quadrature mixing, filtering, envelope detection, audio recovery, and PWM generation.
 
 > This is an experimental and educational radio design.
-> The digital circuit has passed synthesis, GDS generation, Precheck, Viewer generation, RTL tests, and gate-level tests. Real radio reception with an antenna and external analog circuit has not yet been tested.
+> The digital circuit has passed synthesis, GDS generation, Precheck, Viewer generation, RTL tests, gate-level tests, and FPGA bitstream generation.
+> Real radio reception using an antenna and external analog hardware has not yet been tested.
 
 ## Features
 
@@ -204,8 +206,21 @@ The current design has successfully completed:
 * Gate-level Cocotb tests
 * Simulated 810 kHz AM demodulation
 * Simulated 1 kHz audio recovery
+* iCE40UP5K FPGA synthesis
+* iCE40UP5K FPGA placement and routing
+* iCE40UP5K FPGA bitstream generation
 
 The design currently uses a `2x2` Tiny Tapeout tile area.
+
+## FPGA status
+
+The project can be built for the Lattice iCE40UP5K FPGA.
+
+The FPGA workflow successfully generates a bitstream that can be loaded onto a compatible Tiny Tapeout FPGA Breakout board.
+
+However, the generated bitstream has not yet been tested on physical FPGA hardware.
+
+FPGA bitstream generation confirms that the Verilog design can be synthesized and placed on the iCE40UP5K. It does not yet confirm real AM reception or audio output from an FPGA board.
 
 ## External hardware
 
@@ -226,6 +241,7 @@ The Tiny Tapeout output pin must not drive a speaker directly.
 ## Current limitations
 
 * Real antenna reception has not yet been tested
+* FPGA bitstream generation has passed, but physical FPGA hardware testing has not yet been completed
 * External comparator and RC values have not yet been finalized
 * Adjacent-channel rejection requires hardware evaluation
 * RF gain and noise performance require measurement
@@ -234,7 +250,7 @@ The Tiny Tapeout output pin must not drive a speaker directly.
 
 ## Next steps
 
-1. Verify the design on an FPGA
+1. Load the generated bitstream onto an iCE40UP5K FPGA board
 2. Generate a known 810 kHz AM test signal
 3. Build the comparator and feedback RC circuit
 4. Observe the recovered PWM audio with an oscilloscope
@@ -251,6 +267,10 @@ Keropiyo Tiny AM Radioは、Verilogで作った1bit方式のデジタルAMラジ
 現在は、810kHzの搬送波を1kHzの音声で変調した仮想AM信号を使い、RTLシミュレーションとゲートレベルシミュレーションの両方で音声復調に成功しています。
 
 GDS生成、Viewer、Precheckも完了しています。
+
+また、Lattice iCE40UP5K FPGA向けの論理合成、配置配線、ビットストリーム生成にも成功しています。
+
+ただし、生成したビットストリームを実物のFPGAボードへ書き込み、動作させる実機試験はまだ行っていません。
 
 実際のAM放送受信には、アンテナ、RFアンプ、高速コンパレータ、RCフィルタ、音声アンプなどを搭載した外付けPCBが必要です。
 
