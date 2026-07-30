@@ -304,7 +304,13 @@ module tt_um_keropiyo_am_radio (
     assign uio_oe  = 8'hff;
 
     // Avoid unused-input warnings.
-    wire _unused = &{ena, ui_in[7:5], uio_in, 1'b0};
+   wire _unused = &{
+    ena,
+    ui_in[7:5],
+    uio_in,
+    envelope_sum[6:0],
+    1'b0
+};
 
 endmodule
 
