@@ -121,14 +121,14 @@ module tt_um_keropiyo_am_radio (
 
     always @(posedge clk) begin
         if (!rst_n) begin
-            tuning_word      <= TUNE_START;
-            channel_number   <= 7'd31;
-            enc_previous     <= 2'b00;
+            tuning_word       <= TUNE_START;
+            channel_number    <= 7'd31;
+            enc_previous      <= 2'b00;
             enc_quarter_steps <= 3'sd0;
         end else if (home_sync) begin
-            tuning_word      <= TUNE_START;
-            channel_number   <= 7'd31;
-            enc_previous     <= enc_now;
+            tuning_word       <= TUNE_START;
+            channel_number    <= 7'd31;
+            enc_previous      <= enc_now;
             enc_quarter_steps <= 3'sd0;
         end else if (enc_now != enc_previous) begin
             case ({enc_previous, enc_now})
@@ -136,6 +136,7 @@ module tt_um_keropiyo_am_radio (
                 4'b0001, 4'b0111, 4'b1110, 4'b1000: begin
                     if (enc_quarter_steps == 3'sd3) begin
                         enc_quarter_steps <= 3'sd0;
+
                         if (tuning_word < TUNE_MAX) begin
                             tuning_word    <= tuning_word + TUNE_STEP;
                             channel_number <= channel_number + 1'b1;
@@ -149,6 +150,7 @@ module tt_um_keropiyo_am_radio (
                 4'b0010, 4'b1011, 4'b1101, 4'b0100: begin
                     if (enc_quarter_steps == -3'sd3) begin
                         enc_quarter_steps <= 3'sd0;
+
                         if (tuning_word > TUNE_MIN) begin
                             tuning_word    <= tuning_word - TUNE_STEP;
                             channel_number <= channel_number - 1'b1;
@@ -183,8 +185,11 @@ module tt_um_keropiyo_am_radio (
     // Quadrature square-wave local oscillators.
     // cos: + - - + across the four quadrants
     // sin: + + - - across the four quadrants
-    wire lo_i_positive = ~(phase_accumulator[23] ^ phase_accumulator[22]);
-    wire lo_q_positive = ~phase_accumulator[23];
+    wire lo_i_positive =
+        ~(phase_accumulator[23] ^ phase_accumulator[22]);
+
+    wire lo_q_positive =
+        ~phase_accumulator[23];
 
     // Treat comparator output as +1 or -1 and mix with the two LOs.
     wire signed [1:0] mixer_i =
@@ -197,8 +202,8 @@ module tt_um_keropiyo_am_radio (
     // Two-stage CIC low-pass filter and decimator
     // 50 MHz / 512 = 97.65625 ksample/s
     // ----------------------------------------------------------------
-    wire signed [31:0] baseband_i;
-    wire signed [31:0] baseband_q;
+    wire signed [21:0] baseband_i;
+    wire signed [21:0] baseband_q;
     wire sample_tick;
 
     keropiyo_cic_iq #(
@@ -216,23 +221,27 @@ module tt_um_keropiyo_am_radio (
     // ----------------------------------------------------------------
     // AM envelope detector
     //
-    // sqrt(I^2 + Q^2) is expensive. For this first version, use:
+    // sqrt(I^2 + Q^2) is expensive. For this version, use:
     // abs(I) + abs(Q)
     // ----------------------------------------------------------------
-    function [31:0] abs32;
-        input signed [31:0] value;
+    function [21:0] abs22;
+        input signed [21:0] value;
+
         begin
-            abs32 = value[31] ? (~value + 1'b1) : value;
+            abs22 = value[21] ? (~value + 1'b1) : value;
         end
     endfunction
 
-    wire [31:0] i_absolute = abs32(baseband_i);
-    wire [31:0] q_absolute = abs32(baseband_q);
-    wire [32:0] envelope_sum =
+    wire [21:0] i_absolute = abs22(baseband_i);
+    wire [21:0] q_absolute = abs22(baseband_q);
+
+    wire [22:0] envelope_sum =
         {1'b0, i_absolute} + {1'b0, q_absolute};
 
     // Scale to 12 bits and saturate.
-    wire envelope_overflow = |envelope_sum[32:19];
+    wire envelope_overflow =
+        |envelope_sum[22:19];
+
     wire [11:0] envelope_now =
         envelope_overflow ? 12'hfff : envelope_sum[18:7];
 
@@ -288,15 +297,18 @@ module tt_um_keropiyo_am_radio (
 
     // Muting holds the PWM at 50% duty, producing no AC audio after
     // the coupling/filter network.
-    wire [7:0] pwm_level = mute_sync ? 8'd128 : audio_level;
-    wire pwm_audio = (pwm_counter < pwm_level);
+    wire [7:0] pwm_level =
+        mute_sync ? 8'd128 : audio_level;
+
+    wire pwm_audio =
+        pwm_counter < pwm_level;
 
     // ----------------------------------------------------------------
     // Tiny Tapeout outputs
     // ----------------------------------------------------------------
-    assign uo_out[0] = comp_out;
-    assign uo_out[1] = pwm_audio;
-    assign uo_out[2] = sample_tick;
+    assign uo_out[0]   = comp_out;
+    assign uo_out[1]   = pwm_audio;
+    assign uo_out[2]   = sample_tick;
     assign uo_out[7:3] = audio_level[7:3];
 
     // Expose the selected 9 kHz channel number for debugging/display.
@@ -304,13 +316,13 @@ module tt_um_keropiyo_am_radio (
     assign uio_oe  = 8'hff;
 
     // Avoid unused-input warnings.
-   wire _unused = &{
-    ena,
-    ui_in[7:5],
-    uio_in,
-    envelope_sum[6:0],
-    1'b0
-};
+    wire _unused = &{
+        ena,
+        ui_in[7:5],
+        uio_in,
+        envelope_sum[6:0],
+        1'b0
+    };
 
 endmodule
 
@@ -325,62 +337,69 @@ module keropiyo_cic_iq #(
     input  wire                    rst_n,
     input  wire signed [1:0]       i_in,
     input  wire signed [1:0]       q_in,
-    output reg  signed [31:0]      i_out,
-    output reg  signed [31:0]      q_out,
+    output reg  signed [21:0]      i_out,
+    output reg  signed [21:0]      q_out,
     output reg                     out_valid
 );
 
     reg [DECIM_BITS-1:0] decim_counter;
 
-    reg signed [31:0] i_integrator_1;
-    reg signed [31:0] i_integrator_2;
-    reg signed [31:0] q_integrator_1;
-    reg signed [31:0] q_integrator_2;
+    reg signed [21:0] i_integrator_1;
+    reg signed [21:0] i_integrator_2;
+    reg signed [21:0] q_integrator_1;
+    reg signed [21:0] q_integrator_2;
 
-    reg signed [31:0] i_comb_delay_1;
-    reg signed [31:0] i_comb_delay_2;
-    reg signed [31:0] q_comb_delay_1;
-    reg signed [31:0] q_comb_delay_2;
+    reg signed [21:0] i_comb_delay_1;
+    reg signed [21:0] i_comb_delay_2;
+    reg signed [21:0] q_comb_delay_1;
+    reg signed [21:0] q_comb_delay_2;
 
-    wire signed [31:0] i_extended = {{30{i_in[1]}}, i_in};
-    wire signed [31:0] q_extended = {{30{q_in[1]}}, q_in};
+    wire signed [21:0] i_extended =
+        {{20{i_in[1]}}, i_in};
 
-    wire signed [31:0] i_integrator_1_next =
+    wire signed [21:0] q_extended =
+        {{20{q_in[1]}}, q_in};
+
+    wire signed [21:0] i_integrator_1_next =
         i_integrator_1 + i_extended;
-    wire signed [31:0] q_integrator_1_next =
+
+    wire signed [21:0] q_integrator_1_next =
         q_integrator_1 + q_extended;
 
-    wire signed [31:0] i_integrator_2_next =
+    wire signed [21:0] i_integrator_2_next =
         i_integrator_2 + i_integrator_1_next;
-    wire signed [31:0] q_integrator_2_next =
+
+    wire signed [21:0] q_integrator_2_next =
         q_integrator_2 + q_integrator_1_next;
 
-    wire signed [31:0] i_comb_1_next =
+    wire signed [21:0] i_comb_1_next =
         i_integrator_2_next - i_comb_delay_1;
-    wire signed [31:0] q_comb_1_next =
+
+    wire signed [21:0] q_comb_1_next =
         q_integrator_2_next - q_comb_delay_1;
 
-    wire signed [31:0] i_comb_2_next =
+    wire signed [21:0] i_comb_2_next =
         i_comb_1_next - i_comb_delay_2;
-    wire signed [31:0] q_comb_2_next =
+
+    wire signed [21:0] q_comb_2_next =
         q_comb_1_next - q_comb_delay_2;
 
     always @(posedge clk) begin
         if (!rst_n) begin
             decim_counter <= {DECIM_BITS{1'b0}};
 
-            i_integrator_1 <= 32'sd0;
-            i_integrator_2 <= 32'sd0;
-            q_integrator_1 <= 32'sd0;
-            q_integrator_2 <= 32'sd0;
+            i_integrator_1 <= 22'sd0;
+            i_integrator_2 <= 22'sd0;
+            q_integrator_1 <= 22'sd0;
+            q_integrator_2 <= 22'sd0;
 
-            i_comb_delay_1 <= 32'sd0;
-            i_comb_delay_2 <= 32'sd0;
-            q_comb_delay_1 <= 32'sd0;
-            q_comb_delay_2 <= 32'sd0;
+            i_comb_delay_1 <= 22'sd0;
+            i_comb_delay_2 <= 22'sd0;
+            q_comb_delay_1 <= 22'sd0;
+            q_comb_delay_2 <= 22'sd0;
 
-            i_out <= 32'sd0;
-            q_out <= 32'sd0;
+            i_out    <= 22'sd0;
+            q_out    <= 22'sd0;
             out_valid <= 1'b0;
         end else begin
             i_integrator_1 <= i_integrator_1_next;
@@ -399,8 +418,8 @@ module keropiyo_cic_iq #(
                 i_comb_delay_2 <= i_comb_1_next;
                 q_comb_delay_2 <= q_comb_1_next;
 
-                i_out <= i_comb_2_next;
-                q_out <= q_comb_2_next;
+                i_out     <= i_comb_2_next;
+                q_out     <= q_comb_2_next;
                 out_valid <= 1'b1;
             end else begin
                 decim_counter <= decim_counter + 1'b1;
