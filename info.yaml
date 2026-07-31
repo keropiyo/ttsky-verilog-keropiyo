@@ -8,7 +8,7 @@ project:
   clock_hz: 50000000
 
   # Number of Tiny Tapeout tiles
-  tiles: "1x1"
+  tiles: "2x2"
 
   # Top module name
   top_module: "tt_um_keropiyo_am_radio"
