@@ -98,20 +98,20 @@ module tt_um_keropiyo_am_radio (
     // ----------------------------------------------------------------
     // Rotary encoder and AM tuning
     //
-    // 32-bit NCO tuning word:
-    // tuning_word = frequency_hz * 2^32 / 50_000_000
+    // 24-bit NCO tuning word:
+    // tuning_word = frequency_hz * 2^24 / 50_000_000
     //
     // Japanese medium-wave channels use 9 kHz spacing.
-    // Channel 0   = 531 kHz
-    // Channel 31  = 810 kHz (reset/home)
-    // Channel 119 = 1602 kHz
+    // Channel 0   = approximately 531 kHz
+    // Channel 31  = approximately 810 kHz (reset/home)
+    // Channel 119 = approximately 1602 kHz
     // ----------------------------------------------------------------
-    localparam [31:0] TUNE_MIN   = 32'd45612553;  // 531 kHz
-    localparam [31:0] TUNE_STEP  = 32'd773094;    // 9 kHz
-    localparam [31:0] TUNE_START = 32'd69578467;  // 810 kHz
-    localparam [31:0] TUNE_MAX   = 32'd137610739; // 1602 kHz
+    localparam [23:0] TUNE_MIN   = 24'd178174;
+    localparam [23:0] TUNE_STEP  = 24'd3020;
+    localparam [23:0] TUNE_START = 24'd271794;
+    localparam [23:0] TUNE_MAX   = 24'd537554;
 
-    reg [31:0] tuning_word;
+    reg [23:0] tuning_word;
     reg [6:0]  channel_number;
 
     reg [1:0] enc_previous;
@@ -171,11 +171,11 @@ module tt_um_keropiyo_am_radio (
     // ----------------------------------------------------------------
     // Numerically controlled oscillator (NCO)
     // ----------------------------------------------------------------
-    reg [31:0] phase_accumulator;
+    reg [23:0] phase_accumulator;
 
     always @(posedge clk) begin
         if (!rst_n)
-            phase_accumulator <= 32'd0;
+            phase_accumulator <= 24'd0;
         else
             phase_accumulator <= phase_accumulator + tuning_word;
     end
@@ -183,8 +183,8 @@ module tt_um_keropiyo_am_radio (
     // Quadrature square-wave local oscillators.
     // cos: + - - + across the four quadrants
     // sin: + + - - across the four quadrants
-    wire lo_i_positive = ~(phase_accumulator[31] ^ phase_accumulator[30]);
-    wire lo_q_positive = ~phase_accumulator[31];
+    wire lo_i_positive = ~(phase_accumulator[23] ^ phase_accumulator[22]);
+    wire lo_q_positive = ~phase_accumulator[23];
 
     // Treat comparator output as +1 or -1 and mix with the two LOs.
     wire signed [1:0] mixer_i =
