@@ -34,7 +34,7 @@ module tb ();
 `endif
 
     // Instantiate the Keropiyo AM radio.
-    tt_um_keropiyo_am_radio user_project (
+    tt_um_keropiyo_am_radio_2 user_project (
 
 `ifdef GL_TEST
         .VPWR   (VPWR),
