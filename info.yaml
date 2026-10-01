@@ -11,7 +11,7 @@ project:
   tiles: "1x2"
 
   # Top module name
-  top_module: "tt_um_keropiyo_am_radio"
+  top_module: "tt_um_keropiyo_am_radio_2"
 
   # Source files stored in the src directory
   source_files:
