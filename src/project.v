@@ -98,20 +98,20 @@ module tt_um_keropiyo_am_radio (
     // ----------------------------------------------------------------
     // Rotary encoder and AM tuning
     //
-    // 32-bit NCO tuning word:
-    // tuning_word = frequency_hz * 2^32 / 50_000_000
+    // 24-bit NCO tuning word:
+    // tuning_word = frequency_hz * 2^24 / 50_000_000
     //
     // Japanese medium-wave channels use 9 kHz spacing.
-    // Channel 0   = 531 kHz
-    // Channel 31  = 810 kHz (reset/home)
-    // Channel 119 = 1602 kHz
+    // Channel 0   = approximately 531 kHz
+    // Channel 31  = approximately 810 kHz (reset/home)
+    // Channel 119 = approximately 1602 kHz
     // ----------------------------------------------------------------
-    localparam [31:0] TUNE_MIN   = 32'd45612553;  // 531 kHz
-    localparam [31:0] TUNE_STEP  = 32'd773094;    // 9 kHz
-    localparam [31:0] TUNE_START = 32'd69578467;  // 810 kHz
-    localparam [31:0] TUNE_MAX   = 32'd137610739; // 1602 kHz
+    localparam [23:0] TUNE_MIN   = 24'd178174;
+    localparam [23:0] TUNE_STEP  = 24'd3020;
+    localparam [23:0] TUNE_START = 24'd271794;
+    localparam [23:0] TUNE_MAX   = 24'd537554;
 
-    reg [31:0] tuning_word;
+    reg [23:0] tuning_word;
     reg [6:0]  channel_number;
 
     reg [1:0] enc_previous;
@@ -171,11 +171,11 @@ module tt_um_keropiyo_am_radio (
     // ----------------------------------------------------------------
     // Numerically controlled oscillator (NCO)
     // ----------------------------------------------------------------
-    reg [31:0] phase_accumulator;
+    reg [23:0] phase_accumulator;
 
     always @(posedge clk) begin
         if (!rst_n)
-            phase_accumulator <= 32'd0;
+            phase_accumulator <= 24'd0;
         else
             phase_accumulator <= phase_accumulator + tuning_word;
     end
@@ -183,8 +183,8 @@ module tt_um_keropiyo_am_radio (
     // Quadrature square-wave local oscillators.
     // cos: + - - + across the four quadrants
     // sin: + + - - across the four quadrants
-    wire lo_i_positive = ~(phase_accumulator[31] ^ phase_accumulator[30]);
-    wire lo_q_positive = ~phase_accumulator[31];
+    wire lo_i_positive = ~(phase_accumulator[23] ^ phase_accumulator[22]);
+    wire lo_q_positive = ~phase_accumulator[23];
 
     // Treat comparator output as +1 or -1 and mix with the two LOs.
     wire signed [1:0] mixer_i =
@@ -197,8 +197,8 @@ module tt_um_keropiyo_am_radio (
     // Two-stage CIC low-pass filter and decimator
     // 50 MHz / 512 = 97.65625 ksample/s
     // ----------------------------------------------------------------
-    wire signed [31:0] baseband_i;
-    wire signed [31:0] baseband_q;
+    wire signed [21:0] baseband_i;
+    wire signed [21:0] baseband_q;
     wire sample_tick;
 
     keropiyo_cic_iq #(
@@ -216,23 +216,23 @@ module tt_um_keropiyo_am_radio (
     // ----------------------------------------------------------------
     // AM envelope detector
     //
-    // sqrt(I^2 + Q^2) is expensive. For this first version, use:
+    // sqrt(I^2 + Q^2) is expensive. For this version, use:
     // abs(I) + abs(Q)
     // ----------------------------------------------------------------
-    function [31:0] abs32;
-        input signed [31:0] value;
+    function [21:0] abs22;
+        input signed [21:0] value;
         begin
-            abs32 = value[31] ? (~value + 1'b1) : value;
+            abs22 = value[21] ? (~value + 1'b1) : value;
         end
     endfunction
 
-    wire [31:0] i_absolute = abs32(baseband_i);
-    wire [31:0] q_absolute = abs32(baseband_q);
-    wire [32:0] envelope_sum =
+    wire [21:0] i_absolute = abs22(baseband_i);
+    wire [21:0] q_absolute = abs22(baseband_q);
+    wire [22:0] envelope_sum =
         {1'b0, i_absolute} + {1'b0, q_absolute};
 
     // Scale to 12 bits and saturate.
-    wire envelope_overflow = |envelope_sum[32:19];
+    wire envelope_overflow = |envelope_sum[22:19];
     wire [11:0] envelope_now =
         envelope_overflow ? 12'hfff : envelope_sum[18:7];
 
@@ -304,13 +304,13 @@ module tt_um_keropiyo_am_radio (
     assign uio_oe  = 8'hff;
 
     // Avoid unused-input warnings.
-   wire _unused = &{
-    ena,
-    ui_in[7:5],
-    uio_in,
-    envelope_sum[6:0],
-    1'b0
-};
+    wire _unused = &{
+        ena,
+        ui_in[7:5],
+        uio_in,
+        envelope_sum[6:0],
+        1'b0
+    };
 
 endmodule
 
@@ -325,62 +325,62 @@ module keropiyo_cic_iq #(
     input  wire                    rst_n,
     input  wire signed [1:0]       i_in,
     input  wire signed [1:0]       q_in,
-    output reg  signed [31:0]      i_out,
-    output reg  signed [31:0]      q_out,
+    output reg  signed [21:0]      i_out,
+    output reg  signed [21:0]      q_out,
     output reg                     out_valid
 );
 
     reg [DECIM_BITS-1:0] decim_counter;
 
-    reg signed [31:0] i_integrator_1;
-    reg signed [31:0] i_integrator_2;
-    reg signed [31:0] q_integrator_1;
-    reg signed [31:0] q_integrator_2;
+    reg signed [21:0] i_integrator_1;
+    reg signed [21:0] i_integrator_2;
+    reg signed [21:0] q_integrator_1;
+    reg signed [21:0] q_integrator_2;
 
-    reg signed [31:0] i_comb_delay_1;
-    reg signed [31:0] i_comb_delay_2;
-    reg signed [31:0] q_comb_delay_1;
-    reg signed [31:0] q_comb_delay_2;
+    reg signed [21:0] i_comb_delay_1;
+    reg signed [21:0] i_comb_delay_2;
+    reg signed [21:0] q_comb_delay_1;
+    reg signed [21:0] q_comb_delay_2;
 
-    wire signed [31:0] i_extended = {{30{i_in[1]}}, i_in};
-    wire signed [31:0] q_extended = {{30{q_in[1]}}, q_in};
+    wire signed [21:0] i_extended = {{20{i_in[1]}}, i_in};
+    wire signed [21:0] q_extended = {{20{q_in[1]}}, q_in};
 
-    wire signed [31:0] i_integrator_1_next =
+    wire signed [21:0] i_integrator_1_next =
         i_integrator_1 + i_extended;
-    wire signed [31:0] q_integrator_1_next =
+    wire signed [21:0] q_integrator_1_next =
         q_integrator_1 + q_extended;
 
-    wire signed [31:0] i_integrator_2_next =
+    wire signed [21:0] i_integrator_2_next =
         i_integrator_2 + i_integrator_1_next;
-    wire signed [31:0] q_integrator_2_next =
+    wire signed [21:0] q_integrator_2_next =
         q_integrator_2 + q_integrator_1_next;
 
-    wire signed [31:0] i_comb_1_next =
+    wire signed [21:0] i_comb_1_next =
         i_integrator_2_next - i_comb_delay_1;
-    wire signed [31:0] q_comb_1_next =
+    wire signed [21:0] q_comb_1_next =
         q_integrator_2_next - q_comb_delay_1;
 
-    wire signed [31:0] i_comb_2_next =
+    wire signed [21:0] i_comb_2_next =
         i_comb_1_next - i_comb_delay_2;
-    wire signed [31:0] q_comb_2_next =
+    wire signed [21:0] q_comb_2_next =
         q_comb_1_next - q_comb_delay_2;
 
     always @(posedge clk) begin
         if (!rst_n) begin
             decim_counter <= {DECIM_BITS{1'b0}};
 
-            i_integrator_1 <= 32'sd0;
-            i_integrator_2 <= 32'sd0;
-            q_integrator_1 <= 32'sd0;
-            q_integrator_2 <= 32'sd0;
+            i_integrator_1 <= 22'sd0;
+            i_integrator_2 <= 22'sd0;
+            q_integrator_1 <= 22'sd0;
+            q_integrator_2 <= 22'sd0;
 
-            i_comb_delay_1 <= 32'sd0;
-            i_comb_delay_2 <= 32'sd0;
-            q_comb_delay_1 <= 32'sd0;
-            q_comb_delay_2 <= 32'sd0;
+            i_comb_delay_1 <= 22'sd0;
+            i_comb_delay_2 <= 22'sd0;
+            q_comb_delay_1 <= 22'sd0;
+            q_comb_delay_2 <= 22'sd0;
 
-            i_out <= 32'sd0;
-            q_out <= 32'sd0;
+            i_out <= 22'sd0;
+            q_out <= 22'sd0;
             out_valid <= 1'b0;
         end else begin
             i_integrator_1 <= i_integrator_1_next;
