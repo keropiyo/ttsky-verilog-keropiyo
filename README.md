@@ -210,7 +210,7 @@ The current design has successfully completed:
 * iCE40UP5K FPGA placement and routing
 * iCE40UP5K FPGA bitstream generation
 
-The design currently uses a `2x2` Tiny Tapeout tile area.
+The design currently uses a `1x2` Tiny Tapeout tile area.
 
 ## FPGA status
 
