@@ -256,7 +256,7 @@ The Tiny Tapeout output pin must not drive a speaker directly.
 4. Observe the recovered PWM audio with an oscilloscope
 5. Add an RC reconstruction filter and audio amplifier
 6. Test reception using an antenna
-7. Optimize the design to reduce tile usage
+
 
 ## 日本語概要
 
